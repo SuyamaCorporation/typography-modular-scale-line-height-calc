@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>タイポグラフィ モジュラースケール &amp; 行高計算ツール</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  pre, code { font-family: 'Courier New', monospace; }
+  .preview-text { font-family: system-ui, -apple-system, sans-serif; }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<div class="max-w-6xl mx-auto px-4 py-6">
+  <h1 class="text-2xl font-bold text-pink-400 mb-1">タイポグラフィ モジュラースケール</h1>
+  <p class="text-gray-400 text-sm mb-6">ベースサイズ・比率から全スケールを生成 — CSS カスタムプロパティ &amp; Tailwind 対応表</p>
+
+  <!-- コントロール -->
+  <div class="bg-gray-900 rounded-xl p-4 mb-6 border border-gray-700">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <label class="text-xs text-gray-400 mb-1 block">ベースサイズ (px)</label>
+        <div class="flex items-center gap-2">
+          <input type="range" id="baseSize" min="10" max="24" step="1" value="16" class="flex-1 h-2 accent-pink-500">
+          <span id="baseSizeLabel" class="text-sm text-pink-300 w-12 text-right">16px</span>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400 mb-1 block">比率 (Ratio)</label>
+        <select id="ratio" class="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-pink-500">
+          <option value="1.067">1.067 — Minor Second</option>
+          <option value="1.125">1.125 — Major Second</option>
+          <option value="1.25" selected>1.250 — Major Third</option>
+          <option value="1.333">1.333 — Perfect Fourth</option>
+          <option value="1.5">1.500 — Perfect Fifth</option>
+          <option value="1.618">1.618 — Golden Ratio</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-400 mb-1 block">プレビューテキスト</label>
+        <input type="text" id="previewText" value="日本語タイポグラフィ"
+          class="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-pink-500">
+      </div>
+    </div>
+  </div>
+
+  <!-- スケール表 -->
+  <div class="bg-gray-900 rounded-xl p-4 mb-6 border border-gray-700 overflow-x-auto">
+    <h2 class="text-sm font-semibold text-gray-300 mb-3">モジュラースケール</h2>
+    <table class="w-full text-xs border-collapse min-w-[700px]">
+      <thead>
+        <tr class="bg-gray-800">
+          <th class="border border-gray-700 px-3 py-2 text-left text-gray-400">ステップ</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-pink-400">px</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-purple-400">rem</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-blue-400">推奨 line-height</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-green-400">推奨 letter-spacing</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-yellow-400">CSS 変数名</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-orange-400">Tailwind クラス</th>
+          <th class="border border-gray-700 px-3 py-2 text-gray-400">プレビュー</th>
+        </tr>
+      </thead>
+      <tbody id="scaleTable"></tbody>
+    </table>
+  </div>
+
+  <!-- CSSカスタムプロパティ出力 -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="bg-gray-900 rounded-xl p-4 border border-gray-700">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-sm font-semibold text-gray-300">CSS カスタムプロパティ</h2>
+        <button onclick="copyCss()" class="text-xs px-3 py-1 bg-pink-800 hover:bg-pink-700 rounded transition-colors">コピー</button>
+      </div>
+      <pre id="cssOutput" class="bg-gray-950 rounded p-3 text-xs text-green-300 overflow-x-auto max-h-80"></pre>
+    </div>
+    <div class="bg-gray-900 rounded-xl p-4 border border-gray-700">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-sm font-semibold text-gray-300">Tailwind tailwind.config.js</h2>
+        <button onclick="copyTailwind()" class="text-xs px-3 py-1 bg-orange-800 hover:bg-orange-700 rounded transition-colors">コピー</button>
+      </div>
+      <pre id="tailwindOutput" class="bg-gray-950 rounded p-3 text-xs text-orange-200 overflow-x-auto max-h-80"></pre>
+    </div>
+  </div>
+
+  <!-- Tailwind対応表 -->
+  <div class="bg-gray-900 rounded-xl p-4 border border-gray-700">
+    <h2 class="text-sm font-semibold text-gray-300 mb-3">Tailwind デフォルト text-size 対応表</h2>
+    <div class="overflow-x-auto">
+      <table class="text-xs border-collapse w-full font-mono">
+        <thead><tr class="bg-gray-800">
+          <th class="border border-gray-700 px-3 py-2 text-left text-gray-400">クラス</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-pink-400">px</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-purple-400">rem</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-blue-400">line-height</th>
+          <th class="border border-gray-700 px-3 py-2 text-left text-gray-400">用途</th>
+        </tr></thead>
+        <tbody id="tailwindTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const STEP_NAMES = [
+  { step: -2, name: 'xs',  varName: '--font-size-xs',   hint: '注釈・キャプション' },
+  { step: -1, name: 'sm',  varName: '--font-size-sm',   hint: '補足テキスト' },
+  { step:  0, name: 'base',varName: '--font-size-base',  hint: 'ベース・本文' },
+  { step:  1, name: 'md',  varName: '--font-size-md',   hint: '小見出し' },
+  { step:  2, name: 'lg',  varName: '--font-size-lg',   hint: '見出し3' },
+  { step:  3, name: 'xl',  varName: '--font-size-xl',   hint: '見出し2' },
+  { step:  4, name: '2xl', varName: '--font-size-2xl',  hint: '見出し1' },
+  { step:  5, name: '3xl', varName: '--font-size-3xl',  hint: 'ヒーロータイトル' },
+  { step:  6, name: '4xl', varName: '--font-size-4xl',  hint: '大型ディスプレイ' },
+  { step:  7, name: '5xl', varName: '--font-size-5xl',  hint: '超大型' },
+  { step:  8, name: '6xl', varName: '--font-size-6xl',  hint: '最大' },
+];
+
+const TAILWIND_DEFAULTS = [
+  { cls:'text-xs',   px:12,  rem:'0.75',  lh:'1rem (16px)',  use:'注釈' },
+  { cls:'text-sm',   px:14,  rem:'0.875', lh:'1.25rem',      use:'補足' },
+  { cls:'text-base', px:16,  rem:'1',     lh:'1.5rem',       use:'本文' },
+  { cls:'text-lg',   px:18,  rem:'1.125', lh:'1.75rem',      use:'小見出し' },
+  { cls:'text-xl',   px:20,  rem:'1.25',  lh:'1.75rem',      use:'見出し3' },
+  { cls:'text-2xl',  px:24,  rem:'1.5',   lh:'2rem',         use:'見出し2' },
+  { cls:'text-3xl',  px:30,  rem:'1.875', lh:'2.25rem',      use:'見出し1' },
+  { cls:'text-4xl',  px:36,  rem:'2.25',  lh:'2.5rem',       use:'ヒーロー' },
+  { cls:'text-5xl',  px:48,  rem:'3',     lh:'1 (tight)',    use:'大型' },
+  { cls:'text-6xl',  px:60,  rem:'3.75',  lh:'1',            use:'超大型' },
+  { cls:'text-7xl',  px:72,  rem:'4.5',   lh:'1',            use:'最大' },
+  { cls:'text-8xl',  px:96,  rem:'6',     lh:'1',            use:'ディスプレイ' },
+  { cls:'text-9xl',  px:128, rem:'8',     lh:'1',            use:'巨大' },
+];
+
+function lineHeight(px) {
+  // inversely proportional: small text -> larger line-height
+  // range 1.9 (at 10px) to 1.1 (at 60px+)
+  const lh = Math.max(1.1, Math.min(1.9, 2.1 - px * 0.012));
+  return Math.round(lh * 100) / 100;
+}
+
+function letterSpacing(px) {
+  if (px < 12) return '0.05em';
+  if (px < 16) return '0.025em';
+  if (px < 20) return '0em';
+  if (px < 32) return '-0.01em';
+  if (px < 48) return '-0.02em';
+  return '-0.03em';
+}
+
+function findTailwindClass(px, basePx) {
+  const remVal = px / 16;
+  const matches = TAILWIND_DEFAULTS.filter(t => Math.abs(t.px - px) < 2);
+  if (matches.length) return matches[0].cls;
+  if (remVal < 0.75) return 'text-xs';
+  if (remVal < 0.875) return 'text-xs / text-sm';
+  if (remVal < 1.0) return 'text-sm';
+  if (remVal < 1.125) return 'text-base / text-lg';
+  if (remVal < 1.5) return 'text-lg / text-xl';
+  if (remVal < 2.0) return 'text-2xl / text-3xl';
+  if (remVal < 3.0) return 'text-4xl / text-5xl';
+  return 'text-6xl+';
+}
+
+let generatedData = [];
+
+function generate() {
+  const baseSize = parseInt(document.getElementById('baseSize').value);
+  const ratio = parseFloat(document.getElementById('ratio').value);
+  const previewText = document.getElementById('previewText').value || 'Aa';
+
+  document.getElementById('baseSizeLabel').textContent = `${baseSize}px`;
+
+  generatedData = STEP_NAMES.map(item => {
+    const px = baseSize * Math.pow(ratio, item.step);
+    const rem = px / 16;
+    const lh = lineHeight(px);
+    const ls = letterSpacing(px);
+    const tw = findTailwindClass(px, baseSize);
+    return { ...item, px, rem, lh, ls, tw };
+  });
+
+  // table
+  const tbody = document.getElementById('scaleTable');
+  tbody.innerHTML = '';
+  generatedData.forEach(d => {
+    const pxR = Math.round(d.px * 100) / 100;
+    const remR = Math.round(d.rem * 1000) / 1000;
+    const isBase = d.step === 0;
+    const tr = document.createElement('tr');
+    tr.className = isBase ? 'bg-pink-900/20 hover:bg-pink-900/30' : 'hover:bg-gray-800/50';
+    tr.innerHTML = `
+      <td class="border border-gray-700 px-3 py-1.5 font-mono text-gray-400">${d.step > 0 ? '+' : ''}${d.step} (${d.name})${isBase ? ' ★' : ''}</td>
+      <td class="border border-gray-700 px-3 py-1.5 font-mono text-pink-300">${pxR}px</td>
+      <td class="border border-gray-700 px-3 py-1.5 font-mono text-purple-300">${remR}rem</td>
+      <td class="border border-gray-700 px-3 py-1.5 font-mono text-blue-300">${d.lh}</td>
+      <td class="border border-gray-700 px-3 py-1.5 font-mono text-green-300">${d.ls}</td>
+      <td class="border border-gray-700 px-3 py-1.5 font-mono text-yellow-300">${d.varName}</td>
+      <td class="border border-gray-700 px-3 py-1.5 font-mono text-orange-300">${d.tw}</td>
+      <td class="border border-gray-700 px-3 py-1.5 preview-text text-gray-200 max-w-xs overflow-hidden whitespace-nowrap text-ellipsis" style="font-size:${Math.min(pxR,32)}px;line-height:${d.lh};letter-spacing:${d.ls}">${previewText}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // CSS output
+  const cssLines = [':root {'];
+  generatedData.forEach(d => {
+    const pxR = Math.round(d.px * 10) / 10;
+    const remR = (Math.round(d.rem * 1000) / 1000).toFixed(3);
+    const lh = d.lh.toFixed(2);
+    const ls = d.ls;
+    cssLines.push(`  ${d.varName}: ${remR}rem; /* ${pxR}px | lh:${lh} | ls:${ls} */`);
+  });
+  cssLines.push('');
+  generatedData.forEach(d => {
+    cssLines.push(`  --line-height-${d.name}: ${d.lh.toFixed(2)};`);
+  });
+  cssLines.push('');
+  generatedData.forEach(d => {
+    cssLines.push(`  --letter-spacing-${d.name}: ${d.ls};`);
+  });
+  cssLines.push('}');
+  document.getElementById('cssOutput').textContent = cssLines.join('\n');
+
+  // Tailwind output
+  const twLines = [`// tailwind.config.js`, `module.exports = {`, `  theme: {`, `    extend: {`, `      fontSize: {`];
+  generatedData.forEach(d => {
+    const remR = (Math.round(d.rem * 1000) / 1000).toFixed(3);
+    const lh = d.lh.toFixed(2);
+    twLines.push(`        '${d.name}': ['${remR}rem', { lineHeight: '${lh}', letterSpacing: '${d.ls}' }],`);
+  });
+  twLines.push(`      },`, `    },`, `  },`, `};`);
+  document.getElementById('tailwindOutput').textContent = twLines.join('\n');
+}
+
+// Tailwind table
+const twTbody = document.getElementById('tailwindTable');
+TAILWIND_DEFAULTS.forEach(t => {
+  const tr = document.createElement('tr');
+  tr.className = 'hover:bg-gray-800/50';
+  tr.innerHTML = `
+    <td class="border border-gray-700 px-3 py-1.5 text-orange-300">${t.cls}</td>
+    <td class="border border-gray-700 px-3 py-1.5 text-pink-300">${t.px}px</td>
+    <td class="border border-gray-700 px-3 py-1.5 text-purple-300">${t.rem}rem</td>
+    <td class="border border-gray-700 px-3 py-1.5 text-blue-300">${t.lh}</td>
+    <td class="border border-gray-700 px-3 py-1.5 text-gray-400 font-sans">${t.use}</td>
+  `;
+  twTbody.appendChild(tr);
+});
+
+function copyCss() {
+  const text = document.getElementById('cssOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = 'コピー済!';
+    setTimeout(() => btn.textContent = 'コピー', 1500);
+  });
+}
+
+function copyTailwind() {
+  const text = document.getElementById('tailwindOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = 'コピー済!';
+    setTimeout(() => btn.textContent = 'コピー', 1500);
+  });
+}
+
+['baseSize','ratio','previewText'].forEach(id => {
+  document.getElementById(id).addEventListener('input', generate);
+  document.getElementById(id).addEventListener('change', generate);
+});
+
+generate();
+</script>
+</body>
+</html>
